@@ -5,10 +5,9 @@ import rospy
 from moveit_commander.conversions import list_to_pose
 
 from move_group_utils.move_group_utils import (MoveGroupUtils,
-                                               publish_trajectory_markers,
-                                               poses_list_from_yaml)
+                                               poses_list_from_yaml,
+                                               publish_trajectory_markers)
 from pilz_robot_program.pilz_robot_program import Lin, Ptp, Sequence
-
 
 home = (0.0, -pi/2.0, pi/2.0, 0.0, pi/2.0, -pi/2)
 
@@ -18,13 +17,17 @@ def robot_program():
     mgi = MoveGroupUtils()
     rospy.sleep(3.0)
 
+    # add collision object
+    mgi.add_ground_cube()
+
     sequence = Sequence()
 
     sequence.append(Ptp(goal=home))
 
-    # create pose mgs list from yaml
+    # create pose
+    # mgs list from yaml
     poses_list = poses_list_from_yaml(
-        '/dev_ws/src/ur10e_examples/toolpaths/test.yaml')
+        '/dev_ws/src/ur10e_examples/toolpaths/poses.yaml')
 
     # # alternative poses from ros param server
     # if rospy.has_param('gh_poses'):
