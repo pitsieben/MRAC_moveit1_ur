@@ -1,0 +1,19 @@
+path:
+ - pose_id: 0
+   position: [1.083, 0.0 , 0.253]
+   quaternion: [0.0, 1.0, 0.0, 0.0]
+ - pose_id: 1
+   position: [0.962, 0.209578147716 , 0.253]
+   quaternion: [0.0, 1.0, 0.0, 0.0]
+ - pose_id: 2
+   position: [0.72, 0.209578147716 , 0.253]
+   quaternion: [0.0, 1.0, 0.0, 0.0]
+ - pose_id: 3
+   position: [0.599, 2.96354737625e-17 , 0.253]
+   quaternion: [0.0, 1.0, 0.0, 0.0]
+ - pose_id: 4
+   position: [0.72, -0.209578147716 , 0.253]
+   quaternion: [0.0, 1.0, 0.0, 0.0]
+ - pose_id: 5
+   position: [0.962, -0.209578147716 , 0.253]
+   quaternion: [0.0, 1.0, 0.0, 0.0]

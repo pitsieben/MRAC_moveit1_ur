@@ -18,7 +18,7 @@ from pilz_robot_program.pilz_robot_program import Lin, Ptp, Sequence
 home = (0.0, -pi/2.0, pi/2.0, -pi, -pi/2, 0)
 
 pose_list = poses_list_from_yaml(
-    '/dev_ws/src/ur10e_examples/toolpaths/scan.yaml')
+    '/dev_ws/src/ur10e_examples/toolpaths/test_2.yaml')
 toolpath = [list_to_pose(pose) for pose in pose_list]
 
 # define end effector
@@ -64,7 +64,7 @@ scan_acc = 0.01
 
 # boolean to enable/disable reconstruction
 # for testing purposes
-scan = True
+scan = False
 
 
 def robot_program():

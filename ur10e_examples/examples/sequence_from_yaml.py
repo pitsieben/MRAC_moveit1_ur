@@ -27,7 +27,7 @@ def robot_program():
     # create pose
     # mgs list from yaml
     poses_list = poses_list_from_yaml(
-        '/dev_ws/src/ur10e_examples/toolpaths/poses.yaml')
+        '/dev_ws/src/ur10e_examples/toolpaths/test_2.yaml')
 
     # # alternative poses from ros param server
     # if rospy.has_param('gh_poses'):
