@@ -1,11 +1,12 @@
 import pathlib
+from typing import List
 
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
-
 import open3d as o3d
 
+color_map = plt.get_cmap('tab20')
 # conda install pillow matplotlib
 
 
@@ -23,8 +24,35 @@ pcd = read_ply(str(pcd_path))
 print('pcd read successfully')
 # o3d.visualization.draw_geometries([pcd])
 
-# VOXEL DOWN SAMPLING
 
+# statistical outlier removal
+def remove_outliers(pcd, nb_neighbors, std_ratio):
+    cl, ind = pcd.remove_statistical_outlier(nb_neighbors=nb_neighbors,
+                                             std_ratio=std_ratio)
+    return cl
+# o3d.visualization.draw_geometries([remove_outliers(pcd, 20, 2.0)])
+
+
+# segment plane
+def plane_segmentation(pcd, distance_threshold):
+    plane_model, inliers = pcd.segment_plane(distance_threshold=distance_threshold,
+                                             ransac_n=3,
+                                             num_iterations=1000)
+    [a, b, c, d] = plane_model
+    print(f"Plane equation: {a}x + {b}y + {c}z + {d} = 0")
+
+    inlier_cloud = pcd.select_by_index(inliers)
+    inlier_cloud.paint_uniform_color([0, 0.5, 0.5])
+
+    outlier_cloud = pcd.select_by_index(inliers, invert=True)
+    # outlier_cloud.paint_uniform_color([0.5, 0.5, 0.5])
+
+    return inlier_cloud, outlier_cloud
+inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.003)
+# o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+pcb = outlier_cloud
+# o3d.visualization.draw_geometries([pcb])
 
 def voxel_down_sample(pcd, voxel_size):
     pcd_down = pcd.voxel_down_sample(voxel_size)
@@ -32,7 +60,57 @@ def voxel_down_sample(pcd, voxel_size):
 
 
 # o3d.visualization.draw_geometries([voxel_down_sample(pcd, 0.005)])
-pcd = voxel_down_sample(pcd, 0.00001)
+pcd = voxel_down_sample(pcd, 0.001)
+
+# cluster
+def split_clusters(pcd, eps, min_points):
+    cl, ind = pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=True)
+    max_clusters = np.max(cl)
+    print(f'point cloud has {max_clusters + 1} clusters')
+    print(f'cluster labels: {np.unique(cl)}')
+    print(f'cluster sizes: {np.bincount(cl + 1)}')
+
+    clusters = []
+    for i in range(max_clusters + 1):
+        cluster = pcd.select_by_index(np.where(cl == i)[0])
+        cluster.paint_uniform_color(color_map(i / (max_clusters + 1))[:3])
+        clusters.append(cluster)
+
+    # sort clusters by size
+    clusters.sort(key=lambda x: len(x.points), reverse=True)
+    return clusters
+clusters = split_clusters(pcd, 0.01, 50)
+clusters = clusters[1:]
+o3d.visualization.draw_geometries(clusters)
+
+
+
+
+# # DBSCAN CLUSTERING
+# def dbscan_clustering(pcd, eps, min_points):
+#     cl, ind = pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=True)
+#     max_clusters = np.max(cl)
+#     print(f'point cloud has {max_clusters + 1} clusters')
+#     print(f'cluster labels: {np.unique(cl)}')
+#     print(f'cluster sizes: {np.bincount(cl + 1)}')
+
+#     clusters = []
+#     for i in range(max_clusters + 1):
+#         cluster = pcd.select_by_index(np.where(cl == i)[0])
+#         cluster.paint_uniform_color(color_map(i / (max_clusters + 1))[:3])
+#         clusters.append(cluster)
+
+#     # sort clusters by size
+#     clusters.sort(key=lambda x: len(x.points), reverse=True)
+
+#     return clusters
+
+
+
+# VOXEL DOWN SAMPLING
+
+
+
 
 # vertex normal estimation
 
@@ -79,19 +157,7 @@ convex_hull(pcd)
 # PLANE SEGMENTATION
 
 
-def plane_segmentation(pcd, distance_threshold):
-    plane_model, inliers = pcd.segment_plane(distance_threshold=distance_threshold,
-                                             ransac_n=3,
-                                             num_iterations=1000)
-    [a, b, c, d] = plane_model
-    print(f"Plane equation: {a}x + {b}y + {c}z + {d} = 0")
 
-    inlier_cloud = pcd.select_by_index(inliers)
-    inlier_cloud.paint_uniform_color([0, 0.5, 0.5])
-
-    outlier_cloud = pcd.select_by_index(inliers, invert=True)
-
-    return inlier_cloud, outlier_cloud
 
 
 # inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.0001)
@@ -130,9 +196,18 @@ pcd_mesh = pcd_mesh.filter_smooth_simple(10)
 # o3d.visualization.draw_geometries([pcd_mesh])
 
 # paint mesh
+
+
 def paint_mesh(pcd_mesh, color):
     pcd_mesh.paint_uniform_color(color)
     return pcd_mesh
-pcd_mesh.compute_vertex_normals()
 
-o3d.visualization.draw_geometries([paint_mesh(pcd_mesh, [0.5, 0.5, 0.5])])
+
+pcd_mesh.compute_vertex_normals()
+# o3d.visualization.draw_geometries([paint_mesh(pcd_mesh, [0.5, 0.5, 0.5])])
+
+# mesh edge extraction
+
+
+
+
