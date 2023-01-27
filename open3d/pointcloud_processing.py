@@ -57,6 +57,19 @@ inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.007)
 pcb = outlier_cloud
 # o3d.visualization.draw_geometries([pcb])
 
+# crop bounding box
+
+
+def crop_bounding_box(pcd, min_bound, max_bound):
+    pcd_crop = pcd.crop(
+        o3d.geometry.AxisAlignedBoundingBox(min_bound, max_bound))
+    return pcd_crop
+
+
+pcb = crop_bounding_box(pcb, [-50, -100, 0.005], [90, 100, 100])
+# o3d.visualization.draw_geometries([pcb])
+
+
 # VOXEL DOWN SAMPLING
 # def voxel_down_sample(pcd, voxel_size):
 #     pcd_down = pcd.voxel_down_sample(voxel_size)
@@ -67,43 +80,6 @@ pcb = outlier_cloud
 # pcd = voxel_down_sample(pcd, 0.001)
 
 
-def split_clusters(pcd: o3d.geometry.PointCloud,
-                   eps: float = 0.02,
-                   min_points: int = 100,
-                   ):
-
-    clusters = []
-
-    cl = np.array(pcd.cluster_dbscan(
-        eps=eps, min_points=min_points, print_progress=True))
-    max_clusters = np.max(cl)
-    print(f'point cloud has {max_clusters + 1} clusters')
-    print(f'cluster labels: {np.unique(cl)}')
-    print(f'cluster sizes: {np.bincount(cl + 1)}')
-
-    for i in range(max_clusters + 1):
-        cluster = pcd.select_by_index(np.where(cl == i)[0])
-        cluster.paint_uniform_color(color_map(i / (max_clusters + 1))[:3])
-        clusters.append(cluster)
-
-    # sort clusters by size
-    clusters.sort(key=lambda x: len(x.points), reverse=True)
-
-    return clusters
-
-
-pcb = split_clusters(pcb, 0.02, 100)
-o3d.visualization.draw_geometries([pcb])
-
-
-# def estimate_normals(pcd, radius):
-#     pcd.estimate_normals(
-#         search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=30))
-#     return pcd
-
-# o3d.visualization.draw_geometries([estimate_normals(pcd, 0.01)])
-
-
 # CONVEX HULL
 def convex_hull(pcd):
     chull, chull_indices = pcd.compute_convex_hull()
@@ -112,46 +88,22 @@ def convex_hull(pcd):
     return chull_ls
 
 
-convex_hull(pcd)
-# o3d.visualization.draw_geometries([convex_hull(pcd)])
-
-# PLANE SEGMENTATION
+convexhull = convex_hull(pcb)
+# o3d.visualization.draw_geometries([convexhull, pcb])
 
 
-# inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.0001)
-# o3d.visualization.draw_geometries(
-#     [inlier_cloud, outlier_cloud, convex_hull(pcd)])
+# point cloud to mesh
+mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
+    pcb, o3d.utility.DoubleVector([0.001, 0.005]))
+mesh.compute_vertex_normals()
+# o3d.visualization.draw_geometries([mesh])
 
-# point cloud edge extraction
-
-
-# def edge_extraction(pcd, radius):
-#     pcd.estimate_normals(
-#         search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=30))
-#     pcd.orient_normals_towards_camera_location()
-#     pcd.orient_normals_consistent_tangent_plane(30 * np.pi / 180)
-
-#     pcd_edge = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-#         pcd, o3d.utility.DoubleVector([radius, radius * 2]))
-#     return pcd_edge
-
-
-# o3d.visualization.draw_geometries(
-#     [edge_extraction(pcd, 0.01), inlier_cloud, outlier_cloud])
-
-# Triangle mesh
-print("Testing mesh in Open3D...")
-pcd_mesh = o3d.io.read_triangle_mesh(str(pcd_path))
-print(pcd_mesh)
-print("")
-print("Computing normal and rendering it.")
-pcd_mesh.compute_vertex_normals()
-# o3d.visualization.draw_geometries([pcd_mesh])
 
 # filter smooth simple
 print("Try to remove the noise")
-pcd_mesh = pcd_mesh.filter_smooth_simple(10)
-# o3d.visualization.draw_geometries([pcd_mesh])
+mesh_simple = mesh.filter_smooth_simple(15)
+mesh_simple.compute_vertex_normals()
+# o3d.visualization.draw_geometries([mesh_simple])
 
 # paint mesh
 
@@ -161,7 +113,48 @@ def paint_mesh(pcd_mesh, color):
     return pcd_mesh
 
 
-pcd_mesh.compute_vertex_normals()
-# o3d.visualization.draw_geometries([paint_mesh(pcd_mesh, [0.5, 0.5, 0.5])])
+mesh_paint = paint_mesh(mesh_simple, [0.5, 0.5, 0.5])
+# o3d.visualization.draw_geometries([mesh_paint])
 
 # mesh edge extraction
+
+
+def extract_mesh_edges(mesh):
+    lineset = o3d.geometry.LineSet.create_from_triangle_mesh(mesh)
+    lineset.paint_uniform_color([0, 0, 0])
+    return lineset
+
+
+mesh_edge = extract_mesh_edges(mesh)
+o3d.visualization.draw_geometries([mesh_edge, mesh])
+
+# create bounding box
+
+
+def create_bounding_box(pcd):
+    bbox = pcd.get_axis_aligned_bounding_box()
+    bbox.color = (0, 0, 1)
+    return bbox
+
+
+bounding_box = create_bounding_box(pcb)
+o3d.visualization.draw_geometries([bounding_box, mesh])
+
+# bounding box dimensions
+
+
+def bounding_box_dimensions(bbox):
+    print(bbox.get_extent())
+
+
+bounding_box_dimensions(bounding_box)
+
+
+# visualiza bounding box dimensions
+
+# def estimate_normals(pcd, radius):
+#     pcd.estimate_normals(
+#         search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=30))
+#     return pcd
+
+# o3d.visualization.draw_geometries([estimate_normals(pcd, 0.01)])
