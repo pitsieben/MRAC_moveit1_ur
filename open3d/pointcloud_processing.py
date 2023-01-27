@@ -4,6 +4,7 @@ from typing import List
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
+
 import open3d as o3d
 
 color_map = plt.get_cmap('tab20')
@@ -15,7 +16,7 @@ def read_ply(path):
     return pcd
 
 
-pcd_path = pathlib.Path('/home/pit/Downloads/8test.ply')
+pcd_path = pathlib.Path('/home/pit/Downloads/eight.ply')
 
 if not pcd_path.exists():
     print('pcd file not found')
@@ -48,29 +49,38 @@ def plane_segmentation(pcd, distance_threshold):
     # outlier_cloud.paint_uniform_color([0.5, 0.5, 0.5])
 
     return inlier_cloud, outlier_cloud
-inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.003)
+
+
+inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.007)
 # o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
 pcb = outlier_cloud
 # o3d.visualization.draw_geometries([pcb])
 
-def voxel_down_sample(pcd, voxel_size):
-    pcd_down = pcd.voxel_down_sample(voxel_size)
-    return pcd_down
+# VOXEL DOWN SAMPLING
+# def voxel_down_sample(pcd, voxel_size):
+#     pcd_down = pcd.voxel_down_sample(voxel_size)
+#     return pcd_down
+# pcd=voxel_down_sample(pcb, 0.001)
+# o3d.visualization.draw_geometries([pcd])
+
+# pcd = voxel_down_sample(pcd, 0.001)
 
 
-# o3d.visualization.draw_geometries([voxel_down_sample(pcd, 0.005)])
-pcd = voxel_down_sample(pcd, 0.001)
+def split_clusters(pcd: o3d.geometry.PointCloud,
+                   eps: float = 0.02,
+                   min_points: int = 100,
+                   ):
 
-# cluster
-def split_clusters(pcd, eps, min_points):
-    cl, ind = pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=True)
+    clusters = []
+
+    cl = np.array(pcd.cluster_dbscan(
+        eps=eps, min_points=min_points, print_progress=True))
     max_clusters = np.max(cl)
     print(f'point cloud has {max_clusters + 1} clusters')
     print(f'cluster labels: {np.unique(cl)}')
     print(f'cluster sizes: {np.bincount(cl + 1)}')
 
-    clusters = []
     for i in range(max_clusters + 1):
         cluster = pcd.select_by_index(np.where(cl == i)[0])
         cluster.paint_uniform_color(color_map(i / (max_clusters + 1))[:3])
@@ -78,41 +88,12 @@ def split_clusters(pcd, eps, min_points):
 
     # sort clusters by size
     clusters.sort(key=lambda x: len(x.points), reverse=True)
+
     return clusters
-clusters = split_clusters(pcd, 0.01, 50)
-clusters = clusters[1:]
-o3d.visualization.draw_geometries(clusters)
 
 
-
-
-# # DBSCAN CLUSTERING
-# def dbscan_clustering(pcd, eps, min_points):
-#     cl, ind = pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=True)
-#     max_clusters = np.max(cl)
-#     print(f'point cloud has {max_clusters + 1} clusters')
-#     print(f'cluster labels: {np.unique(cl)}')
-#     print(f'cluster sizes: {np.bincount(cl + 1)}')
-
-#     clusters = []
-#     for i in range(max_clusters + 1):
-#         cluster = pcd.select_by_index(np.where(cl == i)[0])
-#         cluster.paint_uniform_color(color_map(i / (max_clusters + 1))[:3])
-#         clusters.append(cluster)
-
-#     # sort clusters by size
-#     clusters.sort(key=lambda x: len(x.points), reverse=True)
-
-#     return clusters
-
-
-
-# VOXEL DOWN SAMPLING
-
-
-
-
-# vertex normal estimation
+pcb = split_clusters(pcb, 0.02, 100)
+o3d.visualization.draw_geometries([pcb])
 
 
 # def estimate_normals(pcd, radius):
@@ -122,28 +103,8 @@ o3d.visualization.draw_geometries(clusters)
 
 # o3d.visualization.draw_geometries([estimate_normals(pcd, 0.01)])
 
-# crop point cloud
-
-
-# def crop_point_cloud(pcd, min_bound, max_bound):
-#     pcd_crop = pcd.crop(
-#         o3d.geometry.AxisAlignedBoundingBox(min_bound, max_bound))
-#     return pcd_crop
-
-# o3d.visualization.draw_geometries([crop_point_cloud(pcd, [-0.5, -0.5, -0.5], [0.5, 0.5, 0.5])])
-
-# paint point cloud
-
-
-# def paint_point_cloud(pcd, color):
-#     pcd.paint_uniform_color(color)
-#     return pcd
-
-# o3d.visualization.draw_geometries([paint_point_cloud(pcd, [1, 0.706, 0])])
 
 # CONVEX HULL
-
-
 def convex_hull(pcd):
     chull, chull_indices = pcd.compute_convex_hull()
     chull_ls = o3d.geometry.LineSet.create_from_triangle_mesh(chull)
@@ -155,9 +116,6 @@ convex_hull(pcd)
 # o3d.visualization.draw_geometries([convex_hull(pcd)])
 
 # PLANE SEGMENTATION
-
-
-
 
 
 # inlier_cloud, outlier_cloud = plane_segmentation(pcd, 0.0001)
@@ -207,7 +165,3 @@ pcd_mesh.compute_vertex_normals()
 # o3d.visualization.draw_geometries([paint_mesh(pcd_mesh, [0.5, 0.5, 0.5])])
 
 # mesh edge extraction
-
-
-
-
